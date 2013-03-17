@@ -3,6 +3,7 @@
 #import <objc/runtime.h>
 
 
+NS_ROOT_CLASS
 @interface MAObject
 
 - (BOOL)isEqual:(id)object;
