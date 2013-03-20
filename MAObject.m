@@ -244,7 +244,9 @@
     if([self respondsToSelector: getterSEL])
     {
         NSMethodSignature *sig = [self methodSignatureForSelector: getterSEL];
-        char type = [sig methodReturnType][0];
+		const char *fullReturnType = [sig methodReturnType];
+		const NSUInteger returnLength = [sig methodReturnLength]; // important to support structs/C-arrays
+        char type = fullReturnType[0];
         IMP imp = [self methodForSelector: getterSEL];
         
         if(type == @encode(id)[0] || type == @encode(Class)[0])
@@ -271,8 +273,17 @@
             CASE(double, Double);
             
             #undef CASE
-            
-            [NSException raise: NSInternalInconsistencyException format: @"Class %@ key %@ don't know how to interpret method return type from getter, signature is %@", [isa description], key, sig];
+
+			NSInvocation *getter = [NSInvocation invocationWithMethodSignature: sig];
+			[getter setSelector: getterSEL];
+			[getter invokeWithTarget: self];
+
+			void *buffer = malloc(returnLength);
+			[getter getReturnValue:buffer];
+			NSValue *boxedValue = [[NSValue alloc] initWithBytes: buffer objCType: fullReturnType];
+			free(buffer);
+
+			return [boxedValue autorelease];
         }
     }
     
